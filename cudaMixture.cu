@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 #include "cudaMixture.H"
 #include <fstream>
+#include <type_traits>
 
 std::fstream fout("out.txt");
 
@@ -471,12 +472,36 @@ static int nVibrationalList_ = 2;
 static int nCoeffs_ = 5;  // 默认是7
 static int nElectronicList_ = 30;          // 下面变长数组中的长度
 
+// 检测has_print<T>中的T是否存在静态模板print函数
+template <typename T, typename P, typename U = void>
+struct has_print : std::false_type
+{
+};
 
+template <typename T, typename P>
+struct has_print<T, P, std::void_t<decltype(T::template print<P>(std::declval<std::ostream &>(), std::declval<P *>()))>> : std::true_type
+{
+};
 
 
 struct Y_in { static int getN(){ return nspecie*ncell; } };
 struct Y_ { static int getN(){ return nspecie; }};
-struct Y0_ { static int getN(){ return nspecie*nspecie; }};
+struct Y0_ { 
+    static int getN(){ return nspecie*nspecie; }
+    template<typename T>
+    static void print(std::ostream& os,T* ptr)
+    {
+        for(int i=0;i<nspecie;i++)
+        {
+            for(int j=0;j<nspecie;j++)
+            {
+                os<<ptr[i*nspecie+j]<<" ";
+            }
+            os<<"\n";
+        }
+    }
+
+};
 struct molWeight_ { static int getN(){ return nspecie; } };
 struct diameter_{ static int getN(){ return nspecie; } };
 struct omega_{ static int getN(){ return nspecie; } };
@@ -667,12 +692,19 @@ struct HostData<VarList<Vars...>> {
             using Tag = typename VarI::Tag;
             size_t N = Tag::getN();
             fout<<typeid(Tag).name()<<"\n";
-            for(int i=0;i<N;i++)
-            {
-                fout<<std::get<I>(data)[i]<<" ";
-            }
-            fout<<"\n";
 
+            if constexpr (has_print<Tag,Type>::value)
+            {
+                Tag::print(fout,std::get<I>(data));
+            }
+            else
+            {
+                for(int i=0;i<N;i++)
+                {
+                    fout<<std::get<I>(data)[i]<<" ";
+                }
+                fout<<"\n";
+            }
             print<I+1>();
         }
     }
