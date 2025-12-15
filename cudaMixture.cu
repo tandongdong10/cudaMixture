@@ -484,7 +484,22 @@ struct has_print<T, P, std::void_t<decltype(T::template print<P>(std::declval<st
 };
 
 
-struct Y_in { static int getN(){ return nspecie*ncell; } };
+struct Y_in { 
+    static int getN(){ return nspecie*ncell; }
+    template<typename T>
+    static void print(std::ostream& os,T* ptr)
+    {
+        for(int i=0;i<nspecie;i++)
+        {
+            for(int j=0;j<ncell;j++)
+            {
+                os<<ptr[i*ncell+j]<<" ";
+            }
+            os<<"\n";
+        }
+    }
+
+};
 struct Y_ { static int getN(){ return nspecie; }};
 struct Y0_ { 
     static int getN(){ return nspecie*nspecie; }
