@@ -81,6 +81,7 @@ __global__ void caculate_specieSOA(
     double *Ck_out	                   // [ncell]
 )
 {
+    const double eps = 1e-12;
     int ix = blockIdx.x * blockDim.x + threadIdx.x;
     printf("%d ",ix);
     if (ix >= ncell) return;
@@ -131,8 +132,12 @@ __global__ void caculate_specieSOA(
         for (int j = 0; j < nCoeffs_; j++)
         {
             // 可以优化成先乘最后汇总除以
-            highCpCoeffs_out[j * ncell + ix] = highCpCoeffs_out[j * ncell + ix]*(last_Y/Y) + highCpCoeffs_[j * nspecie + i]*((Y-last_Y)/Y);
-            lowCpCoeffs_out [j * ncell + ix]  = lowCpCoeffs_out[j * ncell + ix]*(last_Y/Y) + lowCpCoeffs_[j * nspecie + i]*((Y-last_Y)/Y);
+            if(fabs(Y) > eps)
+            {
+                highCpCoeffs_out[j * ncell + ix] = highCpCoeffs_out[j * ncell + ix]*(last_Y/Y) + highCpCoeffs_[j * nspecie + i]*((Y-last_Y)/Y);
+                lowCpCoeffs_out [j * ncell + ix]  = lowCpCoeffs_out[j * ncell + ix]*(last_Y/Y) + lowCpCoeffs_[j * nspecie + i]*((Y-last_Y)/Y);
+            }
+            
         }
 
     
@@ -161,12 +166,16 @@ __global__ void caculate_specieSOA(
         }
         
         // sutherlandTransportSOA
-        As_out[ix]      = As_out[ix]*(last_Y/Y)+As_[i]*((Y-last_Y)/Y);
-        Ts_out[ix]      = Ts_out[ix]*(last_Y/Y)+Ts_[i]*((Y-last_Y)/Y);
-        eta_s_out[ix]   = eta_s_out[ix]*(last_Y/Y)+eta_s_[i]*((Y-last_Y)/Y);
-        Ak_out[ix]      = Ak_out[ix]*(last_Y/Y)+Ak_[i]*((Y-last_Y)/Y);
-        Bk_out[ix]      = Bk_out[ix]*(last_Y/Y)+Bk_[i]*((Y-last_Y)/Y);
-        Ck_out[ix]      = Ck_out[ix]*(last_Y/Y)+Ck_[i]*((Y-last_Y)/Y);
+        if(fabs(Y) > eps)
+        {
+            As_out[ix]      = As_out[ix]*(last_Y/Y)+As_[i]*((Y-last_Y)/Y);
+            Ts_out[ix]      = Ts_out[ix]*(last_Y/Y)+Ts_[i]*((Y-last_Y)/Y);
+            eta_s_out[ix]   = eta_s_out[ix]*(last_Y/Y)+eta_s_[i]*((Y-last_Y)/Y);
+            Ak_out[ix]      = Ak_out[ix]*(last_Y/Y)+Ak_[i]*((Y-last_Y)/Y);
+            Bk_out[ix]      = Bk_out[ix]*(last_Y/Y)+Bk_[i]*((Y-last_Y)/Y);
+            Ck_out[ix]      = Ck_out[ix]*(last_Y/Y)+Ck_[i]*((Y-last_Y)/Y);
+        }
+        
     }
 
     // 写回
